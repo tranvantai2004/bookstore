@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { Plus, Search, Edit2, Trash2, X, Package, Grid, List, Star, Upload, Image } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Package, Grid, List, Star, Link } from 'lucide-react';
 import BookCover from '../components/BookCover';
 
-const EMPTY = { title: '', author: '', description: '', price: '', stock: '', category: '' };
+const EMPTY = { title: '', author: '', description: '', price: '', stock: '', category: '', image: '' };
 
 function Modal({ title, onClose, children }) {
   return (
@@ -30,12 +30,8 @@ export default function BooksPage() {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [editId, setEditId] = useState(null);
-  const [editImageUrl, setEditImageUrl] = useState(null);
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState('grid');
-  const fileInputRef = useRef(null);
 
   const fetchBooks = () => {
     const p = new URLSearchParams();
@@ -48,38 +44,17 @@ export default function BooksPage() {
   useEffect(() => { api.get('/books/categories/').then(r => setCategories(r.data.results || r.data)); }, []);
 
   const openEdit = (b) => {
-    setForm({ title: b.title, author: b.author, description: b.description, price: b.price, stock: b.stock, category: b.category });
+    setForm({ title: b.title, author: b.author, description: b.description, price: b.price, stock: b.stock, category: b.category, image: b.image || '' });
     setEditId(b.id);
-    setEditImageUrl(b.image || null);
-    setImageFile(null);
-    setImagePreview(null);
     setModal(true);
   };
-  const openAdd = () => {
-    setForm(EMPTY);
-    setEditId(null);
-    setEditImageUrl(null);
-    setImageFile(null);
-    setImagePreview(null);
-    setModal(true);
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
-  };
+  const openAdd = () => { setForm(EMPTY); setEditId(null); setModal(true); };
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setLoading(true);
     try {
-      const formData = new FormData();
-      Object.entries(form).forEach(([k, v]) => { if (v !== '') formData.append(k, v); });
-      if (imageFile) formData.append('image', imageFile);
-      const config = { headers: { 'Content-Type': 'multipart/form-data' } };
-      if (editId) await api.put(`/books/${editId}/`, formData, config);
-      else await api.post('/books/', formData, config);
+      if (editId) await api.put(`/books/${editId}/`, form);
+      else await api.post('/books/', form);
       toast.success(editId ? 'Cập nhật thành công!' : 'Thêm sách thành công!');
       setModal(false); fetchBooks();
     } catch { toast.error('Thao tác thất bại'); }
@@ -262,13 +237,13 @@ export default function BooksPage() {
       {modal && (
         <Modal title={editId ? 'Chỉnh sửa sách' : 'Thêm sách mới'} onClose={() => setModal(false)}>
           {/* Preview cover */}
-          {(imagePreview || editImageUrl || form.title) && (
+          {(form.image || form.title) && (
             <div className="flex justify-center mb-5">
               <BookCover
                 title={form.title}
                 author={form.author}
                 size="lg"
-                imageUrl={imagePreview || editImageUrl}
+                imageUrl={form.image || null}
               />
             </div>
           )}
@@ -304,36 +279,33 @@ export default function BooksPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Ảnh bìa sách</label>
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-orange-400 hover:bg-orange-50/30 transition group"
-              >
-                {imagePreview ? (
-                  <div className="flex items-center gap-3">
-                    <img src={imagePreview} className="w-12 h-16 object-cover rounded-lg shadow" alt="preview" />
-                    <div className="text-left">
-                      <p className="text-sm font-medium text-gray-700">{imageFile?.name}</p>
-                      <p className="text-xs text-orange-500 mt-0.5">Nhấn để đổi ảnh</p>
-                    </div>
-                  </div>
-                ) : editImageUrl ? (
-                  <div className="flex items-center gap-3">
-                    <BookCover title={form.title} author={form.author} size="sm" imageUrl={editImageUrl} />
-                    <div className="text-left">
-                      <p className="text-sm font-medium text-gray-700">Ảnh hiện tại</p>
-                      <p className="text-xs text-orange-500 mt-0.5">Nhấn để thay ảnh mới</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="py-2">
-                    <Upload size={24} className="text-gray-300 mx-auto mb-2 group-hover:text-orange-400 transition" />
-                    <p className="text-sm text-gray-400 group-hover:text-orange-500 transition">Nhấn để tải ảnh bìa lên</p>
-                    <p className="text-xs text-gray-300 mt-1">JPG, PNG, WEBP — Tối đa 5MB</p>
-                  </div>
-                )}
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Ảnh bìa sách
+                <span className="text-gray-400 font-normal text-xs ml-2">(dán link URL)</span>
+              </label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Link size={15} className="absolute left-3.5 top-3 text-gray-400" />
+                  <input
+                    type="url"
+                    value={form.image}
+                    onChange={e => setForm({...form, image: e.target.value})}
+                    placeholder="https://example.com/anh-bia-sach.jpg"
+                    className="w-full border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-gray-50"
+                  />
+                </div>
               </div>
-              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+              {form.image && (
+                <div className="mt-2 flex items-center gap-2 text-xs text-green-600">
+                  <img
+                    src={form.image}
+                    alt="preview"
+                    className="w-8 h-11 object-cover rounded shadow"
+                    onError={e => { e.target.style.display='none'; }}
+                  />
+                  <span>Xem trước ảnh bìa</span>
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Mô tả</label>

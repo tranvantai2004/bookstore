@@ -17,7 +17,7 @@ class Book(models.Model):
     description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=0)
     stock = models.IntegerField(default=0)
-    image = models.ImageField(upload_to='books/', blank=True, null=True)
+    image = models.URLField(blank=True, null=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='books')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
