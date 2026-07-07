@@ -16,7 +16,7 @@ function BookCard({ book }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 overflow-hidden group">
       <div className="relative p-5 bg-gradient-to-b from-gray-50 to-white flex justify-center">
-        <BookCover title={book.title} author={book.author} size="lg" />
+        <BookCover title={book.title} author={book.author} size="lg" imageUrl={book.image} />
         {book.stock <= 5 && book.stock > 0 && (
           <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">Sắp hết</span>
         )}
@@ -90,7 +90,7 @@ export default function ShopHome() {
         <div className="absolute right-8 top-1/2 -translate-y-1/2 hidden md:flex gap-3 rotate-3">
           {books.slice(0, 3).map(b => (
             <div key={b.id} className="transform hover:-translate-y-2 transition-transform duration-200" style={{transform: `rotate(${Math.random()*6-3}deg)`}}>
-              <BookCover title={b.title} author={b.author} size="md" />
+              <BookCover title={b.title} author={b.author} size="md" imageUrl={b.image} />
             </div>
           ))}
         </div>

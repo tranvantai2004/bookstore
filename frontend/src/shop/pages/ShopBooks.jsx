@@ -66,7 +66,7 @@ export default function ShopBooks() {
         {books.map(book => (
           <div key={book.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 overflow-hidden group">
             <div className="relative p-4 bg-gradient-to-b from-gray-50 to-white flex justify-center">
-              <BookCover title={book.title} author={book.author} size="lg" />
+              <BookCover title={book.title} author={book.author} size="lg" imageUrl={book.image} />
               {book.stock === 0 && (
                 <div className="absolute inset-0 bg-white/70 flex items-center justify-center rounded-t-2xl">
                   <span className="bg-red-500 text-white text-xs font-bold px-3 py-1.5 rounded-full">Hết hàng</span>
