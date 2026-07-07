@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { Plus, Search, Edit2, Trash2, X, Package, Grid, List, Star } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Package, Grid, List, Star, Upload, Image } from 'lucide-react';
 import BookCover from '../components/BookCover';
 
 const EMPTY = { title: '', author: '', description: '', price: '', stock: '', category: '' };
@@ -30,8 +30,12 @@ export default function BooksPage() {
   const [modal, setModal] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [editId, setEditId] = useState(null);
+  const [editImageUrl, setEditImageUrl] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState('grid');
+  const fileInputRef = useRef(null);
 
   const fetchBooks = () => {
     const p = new URLSearchParams();
@@ -45,15 +49,37 @@ export default function BooksPage() {
 
   const openEdit = (b) => {
     setForm({ title: b.title, author: b.author, description: b.description, price: b.price, stock: b.stock, category: b.category });
-    setEditId(b.id); setModal(true);
+    setEditId(b.id);
+    setEditImageUrl(b.image || null);
+    setImageFile(null);
+    setImagePreview(null);
+    setModal(true);
   };
-  const openAdd = () => { setForm(EMPTY); setEditId(null); setModal(true); };
+  const openAdd = () => {
+    setForm(EMPTY);
+    setEditId(null);
+    setEditImageUrl(null);
+    setImageFile(null);
+    setImagePreview(null);
+    setModal(true);
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setImageFile(file);
+    setImagePreview(URL.createObjectURL(file));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setLoading(true);
     try {
-      if (editId) await api.put(`/books/${editId}/`, form);
-      else await api.post('/books/', form);
+      const formData = new FormData();
+      Object.entries(form).forEach(([k, v]) => { if (v !== '') formData.append(k, v); });
+      if (imageFile) formData.append('image', imageFile);
+      const config = { headers: { 'Content-Type': 'multipart/form-data' } };
+      if (editId) await api.put(`/books/${editId}/`, formData, config);
+      else await api.post('/books/', formData, config);
       toast.success(editId ? 'Cập nhật thành công!' : 'Thêm sách thành công!');
       setModal(false); fetchBooks();
     } catch { toast.error('Thao tác thất bại'); }
@@ -120,7 +146,7 @@ export default function BooksPage() {
               className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 overflow-hidden group cursor-pointer">
               {/* Cover area */}
               <div className="relative p-4 pb-3 bg-gradient-to-b from-gray-50 to-white flex justify-center">
-                <BookCover title={book.title} author={book.author} size="lg" />
+                <BookCover title={book.title} author={book.author} size="lg" imageUrl={book.image} />
                 {book.stock <= 5 && book.stock > 0 && (
                   <span className="absolute top-2 left-2 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full shadow">
                     Sắp hết
@@ -180,7 +206,7 @@ export default function BooksPage() {
                 <tr key={book.id} className="hover:bg-orange-50/20 transition group">
                   <td className="px-5 py-3">
                     <div className="flex items-center gap-3">
-                      <BookCover title={book.title} author={book.author} size="sm" />
+                      <BookCover title={book.title} author={book.author} size="sm" imageUrl={book.image} />
                       <div>
                         <p className="font-semibold text-gray-900 text-sm leading-snug">{book.title}</p>
                         <p className="text-xs text-gray-400 mt-0.5">{book.author}</p>
@@ -236,9 +262,14 @@ export default function BooksPage() {
       {modal && (
         <Modal title={editId ? 'Chỉnh sửa sách' : 'Thêm sách mới'} onClose={() => setModal(false)}>
           {/* Preview cover */}
-          {form.title && (
+          {(imagePreview || editImageUrl || form.title) && (
             <div className="flex justify-center mb-5">
-              <BookCover title={form.title} author={form.author} size="lg" />
+              <BookCover
+                title={form.title}
+                author={form.author}
+                size="lg"
+                imageUrl={imagePreview || editImageUrl}
+              />
             </div>
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -271,6 +302,38 @@ export default function BooksPage() {
                 <option value="">Chọn danh mục</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Ảnh bìa sách</label>
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-orange-400 hover:bg-orange-50/30 transition group"
+              >
+                {imagePreview ? (
+                  <div className="flex items-center gap-3">
+                    <img src={imagePreview} className="w-12 h-16 object-cover rounded-lg shadow" alt="preview" />
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-gray-700">{imageFile?.name}</p>
+                      <p className="text-xs text-orange-500 mt-0.5">Nhấn để đổi ảnh</p>
+                    </div>
+                  </div>
+                ) : editImageUrl ? (
+                  <div className="flex items-center gap-3">
+                    <BookCover title={form.title} author={form.author} size="sm" imageUrl={editImageUrl} />
+                    <div className="text-left">
+                      <p className="text-sm font-medium text-gray-700">Ảnh hiện tại</p>
+                      <p className="text-xs text-orange-500 mt-0.5">Nhấn để thay ảnh mới</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-2">
+                    <Upload size={24} className="text-gray-300 mx-auto mb-2 group-hover:text-orange-400 transition" />
+                    <p className="text-sm text-gray-400 group-hover:text-orange-500 transition">Nhấn để tải ảnh bìa lên</p>
+                    <p className="text-xs text-gray-300 mt-1">JPG, PNG, WEBP — Tối đa 5MB</p>
+                  </div>
+                )}
+              </div>
+              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Mô tả</label>
