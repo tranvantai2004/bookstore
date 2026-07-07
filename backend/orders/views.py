@@ -14,12 +14,40 @@ class CustomerViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter]
     search_fields = ['full_name', 'phone', 'email']
 
+    def create(self, request, *args, **kwargs):
+        try:
+            serializer = self.get_serializer(data=request.data)
+            if not serializer.is_valid():
+                with open('error_log.txt', 'a', encoding='utf-8') as f:
+                    f.write(f"CUSTOMER CREATE VALIDATION ERROR: {serializer.errors}\nPAYLOAD: {request.data}\n\n")
+                return Response(serializer.errors, status=400)
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            import traceback
+            with open('error_log.txt', 'a', encoding='utf-8') as f:
+                f.write(f"CUSTOMER CREATE EXCEPTION: {str(e)}\nTRACEBACK:\n{traceback.format_exc()}\n\n")
+            return Response({'detail': str(e)}, status=500)
+
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.select_related('customer', 'created_by').prefetch_related('items__book').all()
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [filters.OrderingFilter]
     ordering = ['-created_at']
+
+    def create(self, request, *args, **kwargs):
+        try:
+            serializer = self.get_serializer(data=request.data)
+            if not serializer.is_valid():
+                with open('error_log.txt', 'a', encoding='utf-8') as f:
+                    f.write(f"ORDER CREATE VALIDATION ERROR: {serializer.errors}\nPAYLOAD: {request.data}\n\n")
+                return Response(serializer.errors, status=400)
+            return super().create(request, *args, **kwargs)
+        except Exception as e:
+            import traceback
+            with open('error_log.txt', 'a', encoding='utf-8') as f:
+                f.write(f"ORDER CREATE EXCEPTION: {str(e)}\nTRACEBACK:\n{traceback.format_exc()}\n\n")
+            return Response({'detail': str(e)}, status=500)
 
     def get_queryset(self):
         qs = super().get_queryset()

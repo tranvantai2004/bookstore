@@ -10,6 +10,7 @@ class CustomerSerializer(serializers.ModelSerializer):
 class OrderItemSerializer(serializers.ModelSerializer):
     book_title = serializers.CharField(source='book.title', read_only=True)
     subtotal = serializers.ReadOnlyField()
+    unit_price = serializers.ReadOnlyField()
 
     class Meta:
         model = OrderItem
